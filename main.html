@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>YatraCompare India</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🚇%3C/text%3E%3C/svg%3E" />
+<script src="https://cdn.tailwindcss.com/3.4.17"></script>
+<style>
+  :root { color-scheme: light; box-sizing: border-box; padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+  html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: #f8fafc; color: #1e293b; }
+  #map { width: 100%; flex: 1; min-height: 300px; border-radius: 1rem; background: #eef2f7; overflow: hidden; }
+  #map svg { width: 100%; height: 100%; display: block; }
+  .custom-scroll::-webkit-scrollbar { width: 5px; }
+  .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+</style>
+</head>
+<body class="antialiased min-h-screen flex flex-col">
+<header class="bg-white border-b border-slate-200 sticky z-40 px-4 py-3" style="top: env(safe-area-inset-top, 0px)">
+  <div class="max-w-7xl mx-auto flex items-center justify-between">
+    <div class="flex items-center gap-2.5">
+      <div class="w-9 h-9 rounded-xl bg-indigo-600 flex items-center justify-center text-white font-black text-xl">₹</div>
+      <div>
+        <h1 class="font-extrabold text-slate-900 text-base leading-tight">YatraCompare India</h1>
+        <p class="text-[11px] text-slate-500 font-medium">Uber • Ola • Rapido • Metro • City Bus • Multimodal</p>
+      </div>
+    </div>
+    <span class="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+      <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Estimates only
+    </span>
+  </div>
+</header>
+
+<main class="max-w-7xl w-full mx-auto p-4 sm:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6 flex-1">
+  <div class="lg:col-span-7 flex flex-col gap-4 min-w-0">
+    <div class="bg-white p-4 sm:p-5 rounded-2xl shadow-sm border border-slate-200">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div class="relative">
+          <div class="flex items-center justify-between mb-1">
+            <label class="text-xs font-bold text-slate-700 flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span> Pickup</label>
+            <button id="btnGps" type="button" class="text-[11px] font-bold text-indigo-600 hover:text-indigo-800">📍 Use My GPS</button>
+          </div>
+          <input id="originInput" type="text" class="w-full px-3 py-2 text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none" placeholder="e.g. Connaught Place, Airport, Majestic..." value="Connaught Place, New Delhi" autocomplete="off" />
+          <div id="originDropdown" class="hidden absolute z-50 left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-xl max-h-56 overflow-y-auto custom-scroll text-xs"></div>
+        </div>
+        <div class="relative">
+          <div class="mb-1"><label class="text-xs font-bold text-slate-700 flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-rose-500"></span> Destination</label></div>
+          <input id="destInput" type="text" class="w-full px-3 py-2 text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none" placeholder="e.g. IGI Airport T3, Cyber City, BKC..." value="IGI Airport Terminal 3, Delhi" autocomplete="off" />
+          <div id="destDropdown" class="hidden absolute z-50 left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-xl max-h-56 overflow-y-auto custom-scroll text-xs"></div>
+        </div>
+      </div>
+      <div id="formMsg" class="hidden mt-2 p-2 rounded-lg bg-amber-50 text-amber-800 text-xs border border-amber-200"></div>
+      <div class="mt-3 pt-3 border-t border-slate-100 grid grid-cols-2 sm:grid-cols-4 gap-2 items-end">
+        <div>
+          <label class="text-[11px] font-semibold text-slate-500 block mb-0.5">Departure Time</label>
+          <input id="depTimeInput" type="datetime-local" class="w-full text-xs border border-slate-300 rounded-lg p-1.5 focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
+        </div>
+        <div>
+          <label class="text-[11px] font-semibold text-slate-500 block mb-0.5">Passengers</label>
+          <select id="passengerSelect" class="w-full text-xs border border-slate-300 rounded-lg p-1.5 focus:ring-2 focus:ring-indigo-500 focus:outline-none font-medium"></select>
+        </div>
+        <div class="col-span-2">
+          <button id="btnCompare" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-xl text-sm shadow-sm">Compare All Routes</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="flex flex-wrap items-center justify-between gap-2 py-1 text-xs">
+      <div class="flex items-center gap-1 bg-slate-200/80 p-0.5 rounded-xl font-bold" id="filterBar">
+        <button data-f="ALL">All Modes</button><button data-f="CABS">Cabs &amp; Autos</button><button data-f="TRANSIT">Metro / Bus</button>
+      </div>
+      <div class="flex items-center gap-1 font-bold" id="sortBar">
+        <button data-s="CHEAPEST">🏷️ Cheapest</button><button data-s="FASTEST">⚡ Fastest</button><button data-s="BALANCED">⚖️ Balanced</button>
+      </div>
+    </div>
+    <div id="resultsContainer" class="space-y-3"></div>
+  </div>
+
+  <div class="lg:col-span-5 h-[360px] lg:h-[calc(100vh-120px)] lg:sticky lg:top-20">
+    <div class="bg-white p-2 rounded-2xl border border-slate-200 shadow-sm h-full flex flex-col">
+      <div class="flex items-center justify-between px-2 py-1 mb-1">
+        <span class="text-xs font-bold text-slate-700">🗺️ Route Overview</span>
+        <span id="routeDistanceBadge" class="text-[11px] text-slate-500 font-bold">0 km</span>
+      </div>
+      <div id="map"></div>
+    </div>
+  </div>
+</main>
+
+<div id="itineraryModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60">
+  <div class="bg-white rounded-2xl max-w-lg w-full p-5 shadow-2xl border border-slate-200">
+    <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+      <div><h3 id="modalTitle" class="font-extrabold text-slate-900 text-base"></h3><p id="modalSubtitle" class="text-xs text-slate-500 font-medium"></p></div>
+      <button id="btnCloseModal" class="w-7 h-7 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-sm">✕</button>
+    </div>
+    <div id="modalSteps" class="mt-4 space-y-3 max-h-[55vh] overflow-y-auto pr-1 custom-scroll"></div>
+    <div class="mt-4 pt-3 border-t border-slate-100 text-right">
+      <button id="btnCloseModalBtn" class="px-4 py-1.5 bg-slate-900 text-white rounded-xl text-xs font-bold hover:bg-slate-800">Close</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const LOCS = [
+  ["Connaught Place, New Delhi",28.6315,77.2167,"Rajiv Chowk, Central Delhi"],
+  ["IGI Airport Terminal 3, Delhi",28.5562,77.1000,"Indira Gandhi International Airport, Delhi"],
+  ["New Delhi Railway Station (NDLS)",28.6429,77.2195,"Paharganj, Delhi"],
+  ["Cyber Hub, Gurugram",28.4950,77.0895,"DLF Cyber City, Gurugram"],
+  ["Noida Sector 62 (Metro Station)",28.6279,77.3756,"Noida, UP"],
+  ["Hauz Khas Village & Metro",28.5494,77.2001,"South Delhi"],
+  ["Anand Vihar ISBT & Railway Stn",28.6469,77.3160,"East Delhi"],
+  ["Kempegowda Bus Station (Majestic), Bengaluru",12.9774,77.5708,"Central Bengaluru"],
+  ["Kempegowda International Airport (BLR)",13.1986,77.7066,"Devanahalli, Bengaluru"],
+  ["Indiranagar 100 Feet Road, Bengaluru",12.9719,77.6412,"Indiranagar, Bengaluru"],
+  ["Whitefield ITPL, Bengaluru",12.9854,77.7317,"Whitefield, Bengaluru"],
+  ["Koramangala Sony World Signal",12.9352,77.6245,"Koramangala, Bengaluru"],
+  ["Electronic City Phase 1",12.8452,77.6602,"Hosur Road, Bengaluru"],
+  ["Chhatrapati Shivaji Terminus (CSMT), Mumbai",18.9401,72.8354,"Fort, South Mumbai"],
+  ["Mumbai Airport Terminal 2 (CSMIA)",19.0896,72.8656,"Andheri East, Mumbai"],
+  ["Bandra Kurla Complex (BKC), Mumbai",19.0657,72.8687,"Bandra East, Mumbai"],
+  ["Dadar Railway Interchange, Mumbai",19.0178,72.8478,"Dadar, Mumbai"],
+  ["Andheri Metro Station (Line 1)",19.1197,72.8464,"Andheri, Mumbai"],
+  ["Rajiv Gandhi International Airport (HYD)",17.2403,78.4294,"Shamshabad, Hyderabad"],
+  ["Hitec City / Cyber Towers, Hyderabad",17.4504,78.3808,"Madhapur, Hyderabad"],
+  ["Secunderabad Junction Railway Station",17.4344,78.5011,"Secunderabad, Telangana"],
+  ["Chennai Central Railway Station (MAS)",13.0827,80.2707,"Periyamet, Chennai"],
+  ["Chennai International Airport (MAA)",12.9941,80.1709,"Meenambakkam, Chennai"],
+  ["Howrah Railway Station (HWH), Kolkata",22.5840,88.3426,"Howrah, West Bengal"],
+  ["Netaji Subhash Chandra Bose Airport (CCU)",22.6547,88.4467,"Dum Dum, Kolkata"],
+  ["Pune Junction Railway Station",18.5284,73.8739,"Agarkar Nagar, Pune"],
+  ["Hinjawadi IT Park Phase 1, Pune",18.5913,73.7389,"Hinjawadi, Pune"]
+].map(a => ({ name: a[0], lat: a[1], lng: a[2], address: a[3] }));
+
+let origin = LOCS[0], dest = LOCS[1], options = [], catFilter = 'ALL', sortType = 'CHEAPEST';
+const $ = id => document.getElementById(id);
+
+function haversine(a, b, c, d) {
+  const R = 6371, r = Math.PI / 180, dLat = (c - a) * r, dLon = (d - b) * r;
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(a * r) * Math.cos(c * r) * Math.sin(dLon / 2) ** 2;
+  return Math.round(R * 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h)) * 10) / 10;
+}
+
+function calculateRoutes(o, d, km, pax, depStr) {
+  const dep = depStr ? new Date(depStr) : new Date();
+  const hr = dep.getHours();
+  const night = hr >= 23 || hr < 5, metroOn = hr >= 6 && hr < 23, busOn = hr >= 5 && hr < 23;
+  const checked = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+  const drive = Math.max(12, Math.round(km / 22 * 60) + 4);
+  const enc = encodeURIComponent;
+  const uber = `https://m.uber.com/ul/?action=setPickup&pickup[latitude]=${o.lat}&pickup[longitude]=${o.lng}&pickup[nickname]=${enc(o.name)}&dropoff[latitude]=${d.lat}&dropoff[longitude]=${d.lng}&dropoff[nickname]=${enc(d.name)}`;
+  const ola = `https://book.olacabs.com/?pickup_lat=${o.lat}&pickup_lng=${o.lng}&drop_lat=${d.lat}&drop_lng=${d.lng}`;
+  const rapido = `https://rapido.bike/booking?src_lat=${o.lat}&src_lng=${o.lng}&dest_lat=${d.lat}&dest_lng=${d.lng}`;
+  const R = [];
+  const add = (r) => R.push(Object.assign({ distanceKm: km, fareTime: checked, isOperating: true, badges: [] }, r));
+  const mult = night ? 1.15 : 1;
+
+  if (pax === 1) {
+    const f = Math.round(25 + Math.max(0, km - 1.5) * 11), t = Math.round(drive * 0.72);
+    add({ id: 'bike', title: 'Rapido Bike Taxi', operator: 'Rapido', mode: 'BIKE_TAXI', category: 'Solo 2-Wheeler', totalCost: f, costPerPerson: f, durationMins: t, waitMins: 3, sourceBadge: 'Estimated Tariff', bookingUrl: rapido,
+      itinerary: [{ text: `Meet Rapido Captain near ${o.name}`, mode: 'WALK', dist: '50 m', time: '1 min' }, { text: `Bike ride to ${d.name}`, mode: 'BIKE', dist: `${km} km`, time: `${t} mins` }] });
+  }
+  if (pax <= 3) {
+    const f = Math.round(30 + Math.max(0, km - 1.5) * 16.5 * (night ? 1.25 : 1));
+    add({ id: 'auto', title: 'Auto Rickshaw (Ola / Rapido / Meter)', operator: 'Ola Auto / City Auto', mode: 'AUTO', category: '3-Wheeler Auto', totalCost: f, costPerPerson: Math.round(f / pax), durationMins: drive + 2, waitMins: 4, sourceBadge: 'Regulated State Tariff', bookingUrl: ola,
+      operatingNote: night ? 'Includes 25% night surcharge (11 PM – 5 AM)' : null,
+      itinerary: [{ text: `Board auto near ${o.name}`, mode: 'AUTO', dist: `${km} km`, time: `${drive + 2} mins` }] });
+  }
+  if (pax <= 4) {
+    const f = Math.round((65 + km * 15.5 + drive * 1.5) * mult);
+    add({ id: 'uber-go', title: 'Uber Go (AC Hatchback)', operator: 'Uber', mode: 'CAB', category: 'WagonR / Swift', totalCost: f, costPerPerson: Math.round(f / pax), durationMins: drive, waitMins: 5, sourceBadge: 'Estimated Tariff', bookingUrl: uber,
+      itinerary: [{ text: `Uber pickup at ${o.name}`, mode: 'CAB', dist: 'Doorstep', time: '5 mins wait' }, { text: `AC hatchback trip to ${d.name}`, mode: 'CAB', dist: `${km} km`, time: `${drive} mins` }] });
+    const p = Math.round((85 + km * 18 + drive * 1.8) * mult);
+    add({ id: 'ola-prime', title: 'Ola Prime Sedan', operator: 'Ola', mode: 'CAB', category: 'Dzire / Etios', totalCost: p, costPerPerson: Math.round(p / pax), durationMins: drive, waitMins: 6, sourceBadge: 'Estimated Tariff', bookingUrl: ola,
+      itinerary: [{ text: `Board Prime Sedan at ${o.name}`, mode: 'CAB', dist: `${km} km`, time: `${drive} mins` }] });
+  }
+  if (pax >= 4) {
+    const f = Math.round(130 + km * 25 + drive * 2);
+    add({ id: 'uber-xl', title: 'Uber XL / Ertiga / Innova', operator: 'Uber', mode: 'CAB', category: '6–8 Seater SUV / MUV', totalCost: f, costPerPerson: Math.round(f / pax), durationMins: drive + 2, waitMins: 7, sourceBadge: 'Estimated Tariff', bookingUrl: uber,
+      itinerary: [{ text: `Board SUV at ${o.name}`, mode: 'CAB', dist: `${km} km`, time: `${drive + 2} mins` }] });
+  }
+  if (km >= 3) {
+    const ph = km > 20 ? 60 : km > 12 ? 50 : km > 6 ? 30 : 20, t = Math.round(km * 2.1) + 12;
+    add({ id: 'metro', title: 'Metro Rail', operator: 'DMRC / Namma Metro / Mumbai Metro', mode: 'METRO', category: 'Rapid Metro Transit', totalCost: ph * pax, costPerPerson: ph, durationMins: t, distanceKm: Math.round(km * 1.08 * 10) / 10, waitMins: 4, sourceBadge: 'Schedule Estimate', bookingUrl: 'https://delhimetrorail.info', isOperating: metroOn,
+      operatingNote: metroOn ? 'Trains typically every 4–5 mins' : 'Metro closed. Service resumes around 06:00 AM',
+      itinerary: [{ text: `Walk to nearest Metro gate near ${o.name}`, mode: 'WALK', dist: '0.4 km', time: '5 mins' }, { text: 'Metro journey towards destination', mode: 'METRO', dist: `${Math.round(km * 0.9)} km`, time: `${t - 10} mins` }, { text: `Exit and walk to ${d.name}`, mode: 'WALK', dist: '0.3 km', time: '4 mins' }] });
+  }
+  if (km >= 2) {
+    const ph = Math.min(45, Math.max(15, Math.round(km * 1.5))), t = Math.round(km / 14 * 60) + 16;
+    add({ id: 'bus', title: 'City Bus (AC / Non-AC)', operator: 'DTC / BMTC / BEST', mode: 'BUS', category: 'Stage Carriage Bus', totalCost: ph * pax, costPerPerson: ph, durationMins: t, distanceKm: Math.round(km * 1.15 * 10) / 10, waitMins: 12, sourceBadge: 'Regulated State Tariff', bookingUrl: 'https://chalo.com', isOperating: busOn,
+      operatingNote: busOn ? 'Daytime frequent service' : 'Limited night service',
+      itinerary: [{ text: 'Walk to the nearest bus stop', mode: 'WALK', dist: '350 m', time: '5 mins' }, { text: 'Board city bus on route', mode: 'BUS', dist: `${km} km`, time: `${t - 9} mins` }, { text: `Alight and walk to ${d.name}`, mode: 'WALK', dist: '0.25 km', time: '4 mins' }] });
+  }
+  if (km >= 6 && metroOn) {
+    const tot = 45 + (km > 15 ? 40 : 30) * pax, t = Math.round((km - 3) * 2) + 16;
+    add({ id: 'mixed', title: 'Smart Mix: Auto + Metro', operator: 'Auto + Metro Hybrid', mode: 'MIXED_MODE', category: 'Traffic-Bypass Combo', totalCost: tot, costPerPerson: Math.round(tot / pax), durationMins: t, waitMins: 3, sourceBadge: 'Integrated Estimate', bookingUrl: uber,
+      operatingNote: 'Avoids road congestion during peak hours',
+      itinerary: [{ text: 'Quick auto to nearest Metro station', mode: 'AUTO', dist: '2.0 km', time: '7 mins' }, { text: 'Metro ride bypassing traffic', mode: 'METRO', dist: `${Math.round(km - 2.5)} km`, time: `${t - 12} mins` }, { text: `Exit and walk to ${d.name}`, mode: 'WALK', dist: '400 m', time: '5 mins' }] });
+  }
+
+  return R;
+}
+
+function assignBadges(R) {
+  R.forEach(r => { r.badges = []; });
+  const act = R.filter(r => r.isOperating);
+  if (act.length) {
+    const ch = [...act].sort((a, b) => a.totalCost - b.totalCost)[0]; ch.badges.push('CHEAPEST');
+    const fa = [...act].sort((a, b) => a.durationMins - b.durationMins)[0];
+    if (!fa.badges.length) fa.badges.push('FASTEST');
+    const sc = act.map(r => ({ r, s: r.totalCost / (ch.totalCost || 1) * 0.45 + r.durationMins / (fa.durationMins || 1) * 0.55 })).sort((a, b) => a.s - b.s)[0].r;
+    if (!sc.badges.length) sc.badges.push('BEST_BALANCED');
+  }
+  return R;
+}
+
+const EMOJI = { BIKE_TAXI: '🏍️', AUTO: '🛺', METRO: '🚇', BUS: '🚌', MIXED_MODE: '🔀', CAB: '🚗', BIKE: '🏍️', WALK: '🚶' };
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+function renderResults() {
+  const box = $('resultsContainer');
+  let list = [...options];
+  if (catFilter === 'CABS') list = list.filter(o => ['CAB', 'AUTO', 'BIKE_TAXI'].includes(o.mode));
+  if (catFilter === 'TRANSIT') list = list.filter(o => ['METRO', 'BUS', 'MIXED_MODE'].includes(o.mode));
+  const score = o => o.totalCost * 0.45 + o.durationMins * 0.55;
+  list.sort((a, b) => sortType === 'CHEAPEST' ? a.totalCost - b.totalCost : sortType === 'FASTEST' ? a.durationMins - b.durationMins : score(a) - score(b));
+  box.innerHTML = '';
+  if (!list.length) { box.innerHTML = '<div class="p-8 text-center bg-white rounded-2xl border border-slate-200 text-slate-500 text-xs">No options available for this filter.</div>'; return; }
+  const pax = parseInt($('passengerSelect').value, 10);
+  const bc = { CHEAPEST: 'bg-emerald-600', FASTEST: 'bg-indigo-600', BEST_BALANCED: 'bg-amber-600' };
+  list.forEach(o => {
+    const card = document.createElement('div');
+    const border = o.badges.includes('CHEAPEST') ? 'border-emerald-300 bg-emerald-50/20' : o.badges.includes('FASTEST') ? 'border-indigo-300 bg-indigo-50/20' : o.badges.includes('BEST_BALANCED') ? 'border-amber-300 bg-amber-50/20' : 'border-slate-200 bg-white';
+    card.className = `p-4 rounded-2xl border ${border}`;
+    const badges = o.badges.map(b => `<span class="text-[10px] font-extrabold px-2 py-0.5 rounded-full text-white uppercase tracking-wider ${bc[b]}">⭐ ${b.replace('_', ' ')}</span>`).join('');
+    card.innerHTML = `
+      <div class="flex items-center justify-between mb-2">
+        <div class="flex flex-wrap items-center gap-1.5">${badges}<span class="text-[10px] font-semibold bg-slate-100 text-slate-700 px-2 py-0.5 rounded-full">${o.sourceBadge}</span></div>
+        <span class="text-[10px] text-slate-400 font-medium">Calculated ${o.fareTime}</span>
+      </div>
+      <div class="flex items-start justify-between gap-2">
+        <div class="flex items-center gap-3 min-w-0">
+          <div class="w-10 h-10 shrink-0 rounded-xl bg-slate-100 flex items-center justify-center text-xl">${EMOJI[o.mode]}</div>
+          <div class="min-w-0"><h3 class="font-extrabold text-slate-900 text-sm sm:text-base leading-snug">${o.title}</h3><p class="text-xs text-slate-500">${o.category} • ${o.operator}</p></div>
+        </div>
+        <div class="text-right shrink-0"><span class="text-xl sm:text-2xl font-black text-slate-900">₹${o.totalCost}</span>${pax > 1 ? `<p class="text-[11px] font-bold text-slate-500">₹${o.costPerPerson}/person</p>` : ''}</div>
+      </div>
+      <div class="grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-slate-100 text-xs">
+        <div><span class="text-slate-400 block text-[10px]">Total Duration</span><span class="font-extrabold">${o.durationMins} mins</span></div>
+        <div><span class="text-slate-400 block text-[10px]">Pickup Wait</span><span class="font-bold">~${o.waitMins} mins</span></div>
+        <div><span class="text-slate-400 block text-[10px]">Distance</span><span class="font-bold">${o.distanceKm} km</span></div>
+      </div>
+      ${o.operatingNote ? `<div class="mt-2 p-2 rounded-xl text-xs ${o.isOperating ? 'bg-indigo-50 text-indigo-700' : 'bg-amber-50 text-amber-800 border border-amber-200'}">${o.isOperating ? 'ℹ️' : '⚠️'} ${o.operatingNote}</div>` : ''}
+      <div class="mt-3 flex items-center gap-2 text-xs">
+        <label class="text-slate-500 font-medium shrink-0">Real fare in app (₹)</label>
+        <input type="number" min="0" inputmode="numeric" class="fare-in w-24 border border-slate-300 rounded-lg p-1 text-xs" placeholder="${o.estimated}" value="${o.overridden ? o.totalCost : ''}" />
+        ${o.overridden ? '<button class="fare-clear text-[11px] font-bold text-rose-600">Reset</button>' : '<span class="text-[10px] text-slate-400">saved for 30 min</span>'}
+      </div>
+      <div class="mt-3 pt-2 flex items-center gap-2">
+        <button class="btn-it flex-1 py-1.5 px-3 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl">Step Itinerary (${o.itinerary.length})</button>
+        <a href="${o.bookingUrl}" target="_blank" rel="noopener noreferrer" class="flex-1 py-1.5 px-3 text-xs font-bold text-center text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl">Book / Open App ↗</a>
+      </div>`;
+    card.querySelector('.btn-it').addEventListener('click', () => openModal(o));
+    const fi = card.querySelector('.fare-in');
+    fi.addEventListener('change', () => setOverride(o, fi.value));
+    const fc = card.querySelector('.fare-clear');
+    if (fc) fc.addEventListener('click', () => setOverride(o, ''));
+    box.appendChild(card);
+  });
+}
+
+function openModal(o) {
+  $('modalTitle').textContent = o.title;
+  $('modalSubtitle').textContent = `${o.operator} • ₹${o.totalCost} • ${o.durationMins} mins total`;
+  $('modalSteps').innerHTML = o.itinerary.map((s, i) => `
+    <div class="flex items-start gap-3 pb-2">
+      <div class="flex flex-col items-center"><div class="w-7 h-7 rounded-full bg-indigo-50 border border-indigo-200 flex items-center justify-center text-xs">${EMOJI[s.mode]}</div>${i < o.itinerary.length - 1 ? '<div class="w-0.5 h-10 bg-slate-200 my-1"></div>' : ''}</div>
+      <div class="flex-1 pt-0.5"><p class="text-xs font-bold text-slate-800">${esc(s.text)}</p><div class="flex gap-3 mt-0.5 text-[11px] text-slate-500 font-medium"><span>${s.dist}</span><span>~${s.time}</span></div></div>
+    </div>`).join('');
+  $('itineraryModal').classList.remove('hidden');
+}
+
+// Self-contained route map (inline SVG: no tiles, no external CSS)
+function updateMap() {
+  const W = 400, H = 400, P = 60;
+  const k = Math.cos((origin.lat + dest.lat) / 2 * Math.PI / 180);
+  const mLat = (origin.lat + dest.lat) / 2, mLng = (origin.lng + dest.lng) / 2;
+  const span = Math.max(Math.abs((dest.lng - origin.lng) * k), Math.abs(dest.lat - origin.lat), 0.01);
+  const s = (W - 2 * P) / span;
+  const px = p => W / 2 + (p.lng - mLng) * k * s, py = p => H / 2 - (p.lat - mLat) * s;
+  const x1 = px(origin), y1 = py(origin), x2 = px(dest), y2 = py(dest);
+  const lab = (x, y, t, c) => `<text x="${Math.min(Math.max(x, 8), W - 8)}" y="${y - 14}" text-anchor="${x > W / 2 ? 'end' : 'start'}" font-size="11" font-weight="700" fill="${c}">${esc(t.length > 30 ? t.slice(0, 29) + '…' : t)}</text>`;
+  let grid = '';
+  for (let i = 1; i < 8; i++) grid += `<line x1="${i * 50}" y1="0" x2="${i * 50}" y2="${H}" stroke="#dbe3ee" stroke-width="1"/><line x1="0" y1="${i * 50}" x2="${W}" y2="${i * 50}" stroke="#dbe3ee" stroke-width="1"/>`;
+  $('map').innerHTML = `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Route from ${esc(origin.name)} to ${esc(dest.name)}">
+    ${grid}
+    <line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#4f46e5" stroke-width="4" stroke-dasharray="6 8" stroke-linecap="round"/>
+    <circle cx="${x1}" cy="${y1}" r="9" fill="#10b981" stroke="#fff" stroke-width="3"/>
+    <circle cx="${x2}" cy="${y2}" r="9" fill="#ef4444" stroke="#fff" stroke-width="3"/>
+    ${lab(x1, y1, 'Pickup: ' + origin.name, '#047857')}${lab(x2, y2 + 38, 'Drop: ' + dest.name, '#b91c1c')}
+    <text x="${W / 2}" y="${H - 10}" text-anchor="middle" font-size="10" fill="#64748b">Straight-line schematic, not a road map</text></svg>`;
+}
+
+function showMsg(t) { const m = $('formMsg'); m.textContent = t || ''; m.classList.toggle('hidden', !t); }
+
+function resolve(inputId, current) {
+  const v = $(inputId).value.trim().toLowerCase();
+  if (!v) return null;
+  if (current.name === 'My GPS Location' && v.startsWith('my gps')) return current;
+  return LOCS.find(l => l.name.toLowerCase() === v) || LOCS.find(l => l.name.toLowerCase().includes(v) || l.address.toLowerCase().includes(v)) || null;
+}
+
+let overrides = {};
+try { overrides = JSON.parse(localStorage.getItem('yc_fares') || '{}'); } catch (e) { overrides = {}; }
+const ovKey = (o, pax) => `${origin.name}|${dest.name}|${pax}|${o.id}`;
+function setOverride(o, v) {
+  const pax = parseInt($('passengerSelect').value, 10), n = Number(v);
+  if (n > 0) overrides[ovKey(o, pax)] = { v: Math.round(n), t: Date.now() }; else delete overrides[ovKey(o, pax)];
+  try { localStorage.setItem('yc_fares', JSON.stringify(overrides)); } catch (e) {}
+  runComparison();
+}
+
+function runComparison() {
+  const dist = haversine(origin.lat, origin.lng, dest.lat, dest.lng);
+  $('routeDistanceBadge').textContent = `${dist} km straight-line`;
+  const pax = parseInt($('passengerSelect').value, 10);
+  options = calculateRoutes(origin, dest, dist, pax, $('depTimeInput').value);
+  options.forEach(o => {
+    o.estimated = o.totalCost;
+    const e = overrides[ovKey(o, pax)];
+    if (e && Date.now() - e.t < 1800000) { o.totalCost = e.v; o.costPerPerson = Math.round(e.v / pax); o.sourceBadge = 'Your real fare'; o.overridden = true; }
+  });
+  assignBadges(options);
+  renderResults();
+  updateMap();
+}
+
+function setupAutocomplete(inputId, ddId, onSelect) {
+  const input = $(inputId), dd = $(ddId);
+  input.addEventListener('input', () => {
+    const q = input.value.trim().toLowerCase();
+    if (q.length < 2) { dd.classList.add('hidden'); return; }
+    const m = LOCS.filter(l => l.name.toLowerCase().includes(q) || l.address.toLowerCase().includes(q));
+    dd.innerHTML = m.length ? '' : '<div class="p-2.5 text-slate-400 text-[11px]">No matching landmark. Pick one from the supported list.</div>';
+    m.forEach(p => {
+      const it = document.createElement('div');
+      it.className = 'px-3 py-2 hover:bg-indigo-50 cursor-pointer border-b border-slate-100 last:border-b-0';
+      it.innerHTML = `<p class="font-bold text-slate-800">${p.name}</p><p class="text-[11px] text-slate-500 truncate">${p.address}</p>`;
+      it.addEventListener('click', () => { input.value = p.name; dd.classList.add('hidden'); onSelect(p); showMsg(''); runComparison(); });
+      dd.appendChild(it);
+    });
+    dd.classList.remove('hidden');
+  });
+  document.addEventListener('click', e => { if (!input.contains(e.target) && !dd.contains(e.target)) dd.classList.add('hidden'); });
+}
+
+function styleToggle(bar, attr, val, activeCls) {
+  bar.querySelectorAll('button').forEach(b => {
+    b.className = 'px-3 py-1 rounded-lg ' + (b.dataset[attr] === val ? activeCls : 'text-slate-600 hover:text-slate-900');
+  });
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+  const dt = new Date();
+  $('depTimeInput').value = new Date(dt.getTime() - dt.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+  $('passengerSelect').innerHTML = [1, 2, 3, 4, 5, 6, 7, 8].map(n => `<option value="${n}">${n} Passenger${n > 1 ? 's' : ''}</option>`).join('');
+
+  setupAutocomplete('originInput', 'originDropdown', p => { origin = p; });
+  setupAutocomplete('destInput', 'destDropdown', p => { dest = p; });
+
+  $('btnCompare').addEventListener('click', () => {
+    const o = resolve('originInput', origin), d = resolve('destInput', dest);
+    if (!o || !d) { showMsg(`Couldn’t find ${!o ? 'the pickup' : 'the destination'} in the built-in landmark list. Start typing and pick a suggestion.`); return; }
+    origin = o; dest = d; showMsg(''); runComparison();
+  });
+  $('passengerSelect').addEventListener('change', runComparison);
+  $('depTimeInput').addEventListener('change', runComparison);
+
+  $('btnGps').addEventListener('click', () => {
+    if (!navigator.geolocation) { showMsg('Geolocation is not supported here.'); return; }
+    navigator.geolocation.getCurrentPosition(pos => {
+      origin = { name: 'My GPS Location', lat: pos.coords.latitude, lng: pos.coords.longitude, address: 'GPS' };
+      $('originInput').value = 'My GPS Location (Detected)'; showMsg(''); runComparison();
+    }, () => showMsg('Location access is unavailable or denied. Type a landmark instead.'));
+  });
+
+  const fb = $('filterBar'), sb = $('sortBar');
+  const setF = v => { catFilter = v; styleToggle(fb, 'f', v, 'bg-white text-indigo-700 shadow-sm'); renderResults(); };
+  const setS = v => { sortType = v; styleToggle(sb, 's', v, 'bg-indigo-600 text-white shadow-sm'); renderResults(); };
+  fb.querySelectorAll('button').forEach(b => b.addEventListener('click', () => setF(b.dataset.f)));
+  sb.querySelectorAll('button').forEach(b => b.addEventListener('click', () => setS(b.dataset.s)));
+  styleToggle(fb, 'f', 'ALL', 'bg-white text-indigo-700 shadow-sm');
+  styleToggle(sb, 's', 'CHEAPEST', 'bg-indigo-600 text-white shadow-sm');
+
+  const close = () => $('itineraryModal').classList.add('hidden');
+  $('btnCloseModal').addEventListener('click', close);
+  $('btnCloseModalBtn').addEventListener('click', close);
+  runComparison();
+});
+</script>
+</body>
+</html>
