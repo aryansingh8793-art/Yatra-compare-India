@@ -122,8 +122,8 @@ Author
 Aryan Singh 
 B.Tech CSE (AI/ML), Bosscoder School of Technology
 
-- GitHub: @YOUR_USERNAME
-- LinkedIn: your-linkedin
+- GitHub: aryansingh8793-art
+- LinkedIn: https://www.linkedin.com/in/aryan-singh-411ab8309/
 
 Disclaimer
 
